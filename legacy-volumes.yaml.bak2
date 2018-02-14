@@ -1,0 +1,65 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: legacy-logs-dev
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      name: legacy-logs-dev
+  template:
+    metadata:
+      labels:
+        name: legacy-logs-dev
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 93
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: name
+                  operator: In
+                  values:
+                  - legacy-logs-dev
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: legacy-logs-dev
+        image: nginx
+        workingDir: /opt/
+        resources:
+          limits:
+            memory: 500Mi
+        env:
+          - name: "NODE_ENV"
+            value: "QA"
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+        - mountPath: /opt/$MY_POD_NAME
+          name: legacy-logs-dev
+      volumes:
+      - name: legacy-logs-dev
+        nfs:
+#          server: us-east-1a.fs-ce5cb386.us-east-1.amazonaws.com
+          server: 172.20.32.198
+          path: /
+#        spec:
+      initContainers:
+      - image: busybox
+        imagePullPolicy: IfNotPresent
+        name: init-legacy-logs-folder
+        command: ["/bin/sh", "-c", "mkdir /opt/$MY_POD_NAME"]
+#        volumeMounts:
+#        - mountPath: /opt/
+#          name: legacy-logs-dev
+#            command: ["/bin/sh", "-c", "mkdir /opt/$MY_POD_NAME"]
+#      volumes:
+#      - name: legacy-logs-dev
+#        nfs:
+#          server: us-east-1a.fs-ce5cb386.us-east-1.amazonaws.com
+#          server: 172.20.32.198
+#          path: /
