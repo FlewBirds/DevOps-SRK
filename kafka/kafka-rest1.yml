@@ -1,0 +1,52 @@
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: rest
+#  namespace: kafka
+#spec:
+#  ports:
+#  - port: 8082
+#  selector:
+#    app: kafka-rest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest
+  namespace: kafka
+spec:
+  ports:
+  - port: 8082
+  clusterIP: None
+  selector:
+    app: kafka-rest
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: rest
+  namespace: kafka
+spec:
+  serviceName: "rest"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kafka-rest
+    spec:
+      containers:
+      - name: kafka-rest
+        image: confluentinc/cp-kafka-rest:latest
+        env:
+        - name: KAFKA_REST_ZOOKEEPER_CONNECT
+          value: zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+        - name: KAFKA_REST_SCHEMA_REGISTRY_URL
+#          value: http://registry3-0.schema3.kafka.svc.cluster.local:8081
+          value: registry1-0.schema1.kafka.svc.cluster.local:8081,registry2-0.schema2.kafka.svc.cluster.local:8081,registry3-0.schema3.kafka.svc.cluster.local:8081
+        - name: KAFKA_REST_HOST_NAME
+          value: localhost
+#          value: rest-0.rest.kafka.svc.cluster.local
+        - name: KAFKA_REST_LISTENERS
+#          value: http://0.0.0.0:8082
+        ports:
+        - containerPort: 8082
