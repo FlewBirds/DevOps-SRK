@@ -1,0 +1,54 @@
+#kind: Service
+#apiVersion: v1
+#metadata:
+#  name: kafka-manager
+#  namespace: kafka
+#spec:
+#  selector:
+#    app: kafka-manager
+#  ports:
+#  - protocol: TCP
+#    port: 80
+#    targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-manager
+  namespace: kafka
+spec:
+  ports:
+  - port: 80
+    targetPort: http-port
+    protocol: TCP
+  selector:
+    app: kafka-manager
+  type: LoadBalancer
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: kafka-manager
+  namespace: kafka
+spec:
+  serviceName: kafka-manager
+  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: kafka-manager
+  template:
+    metadata:
+      labels:
+        app: kafka-manager
+    spec:
+      containers:
+      - name: kafka-manager
+        image: solsson/kafka-manager@sha256:5db7d54cdb642ec5a92f37a869fdcf2aa479b2552e900b2d2b83b38a1806c2de
+        ports:
+        - containerPort: 80
+        env:
+        - name: ZK_HOSTS
+          value: "zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181"
+        command:
+        - ./bin/kafka-manager
+        - -Dhttp.port=80
