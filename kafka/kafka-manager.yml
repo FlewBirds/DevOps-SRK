@@ -19,7 +19,6 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: http-port
     protocol: TCP
   selector:
     app: kafka-manager
