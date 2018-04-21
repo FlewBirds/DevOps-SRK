@@ -32,3 +32,5 @@ spec:
           value: "zoonavigator-api-0.zoonavigator-api.kafka.svc.cluster.local"
         - name: API_PORT
           value: "9001"
+        ports:
+        - containerPort: 8001
