@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zoonavigator-api
+  namespace: kafka
+spec:
+  ports:
+  - port: 9001
+  clusterIP: None
+  selector:
+    app: zoonavigator-api
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: zoonavigator-api
+  namespace: kafka
+spec:
+  serviceName: "zoonavigator-api"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: zoonavigator-api
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: zoonavigator-api
+        image: elkozmon/zoonavigator-api:latest
+        env:
+        - name: SERVER_HTTP_PORT
+          value: "9001"
+        ports:
+        - containerPort: 9001
