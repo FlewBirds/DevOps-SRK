@@ -1,0 +1,189 @@
+# kubectl create namespace kafka
+
+namespace "kafka" created
+
+# kubectl create -f zookeeper-svc.yml -n kafka
+
+service "zookeeper1" created
+service "zookeeper2" created
+service "zookeeper3" created
+
+# kubectl create -f zookeeper.yml -n kafka
+
+statefulset.apps "zookeeper1" created
+statefulset.apps "zookeeper2" created
+statefulset.apps "zookeeper3" created
+
+# kubectl create -f kafka.yml -n kafka
+
+service "kafka1" created
+statefulset.apps "broker1" created
+service "kafka2" created
+statefulset.apps "broker2" created
+service "kafka3" created
+statefulset.apps "broker3" created
+
+
+# kubectl create -f schema-registry1.yml -n kafka
+
+service "schema1" created
+statefulset.apps "registry1" created
+service "schema2" created
+statefulset.apps "registry2" created
+service "schema3" created
+statefulset.apps "registry3" created
+
+
+kafka-topics --create --topic quickstart-avro-offsets --partitions 3 --replication-factor 3 --if-not-exists --zookeeper zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+
+#kubectl exec broker1-0  -n kafka -- kafka-topics --create --topic quickstart-avro-offsets --partitions 3 --replication-factor 3 --if-not-exists --zookeeper zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+
+
+
+
+#kubectl exec broker1-0  -n kafka -- kafka-topics --create --topic quickstart-avro-config --partitions 3 --replication-factor 3 --if-not-exists --zookeeper zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+
+
+
+#kubectl exec broker1-0  -n kafka -- kafka-topics --describe --zookeeper zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+
+
+
+
+
+# kubectl exec mysql-0  -n kafka -- mysql -u confluent -pconfluent
+mysql: [Warning] Using a password on the command line interface can be insecure.
+
+CREATE DATABASE IF NOT EXISTS connect_test;
+USE connect_test;
+^C
+[root@kops-aws kafka]# kubectl exec -it mysql-0  /bin/bash -n kafka
+root@mysql-0:/# mysql -u confluent -pconfluent
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 3
+Server version: 5.7.21 MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2018, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> CREATE DATABASE IF NOT EXISTS connect_test;
+Query OK, 1 row affected, 1 warning (0.00 sec)
+
+mysql> USE connect_test;
+Database changed
+mysql> DROP TABLE IF EXISTS test;
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+mysql> CREATE TABLE IF NOT EXISTS test (
+    ->   id serial NOT NULL PRIMARY KEY,
+    ->   name varchar(100),
+    ->   email varchar(200),
+    ->   department varchar(200),
+    ->   modified timestamp default CURRENT_TIMESTAMP NOT NULL,
+    ->   INDEX `modified_index` (`modified`)
+    -> );
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('alice', 'alice@abc.com', 'engineering');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> INSERT INTO test (name, email, department) VALUES ('bob', 'bob@abc.com', 'sales');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> exit;
+Bye
+root@mysql-0:/#
+
+
+
+mkdir -p /tmp/quickstart/jars
+
+curl -k -SL "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.39.tar.gz" | tar -xzf - -C /tmp/quickstart/jars --strip-components=1 mysql-connector-java-5.1.39/mysql-connector-java-5.1.39-bin.jar
+
+##Execute on kafka connect host:
+
+curl -X POST \
+  -H "Content-Type: application/json" \
+  --data '{ "name": "quickstart-jdbc-source", "config": { "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector", "tasks.max": 1, "connection.url": "jdbc:mysql://mysql-0.mysql.kafka.svc.cluster.local:3306/connect_test?user=confluent&password=confluent", "mode": "incrementing", "incrementing.column.name": "id", "timestamp.column.name": "modified", "topic.prefix": "quickstart-jdbc-", "poll.interval.ms": 1000 } }' \
+  http://localhost:8083/connectors
+  
+  
+[root@kops-aws kafka]# kubectl exec -it kafkaconnect-0 /bin/bash -n kafka
+root@kafkaconnect-0:/#
+root@kafkaconnect-0:/#
+root@kafkaconnect-0:/# curl -X POST \
+>   -H "Content-Type: application/json" \
+>   --data '{ "name": "quickstart-jdbc-source", "config": { "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector", "tasks.max": 1, "connection.url": "jdbc:mysql://mysql-0.mysql.kafka.svc.cluster.local:3306/connect_test?user=confluent&password=confluent", "mode": "incrementing", "incrementing.column.name": "id", "timestamp.column.name": "modified", "topic.prefix": "quickstart-jdbc-", "poll.interval.ms": 1000 } }' \
+>   http://localhost:8083/connectors
+{"name":"quickstart-jdbc-source","config":{"connector.class":"io.confluent.connect.jdbc.JdbcSourceConnector","tasks.max":"1","connection.url":"jdbc:mysql://mysql-0.mysql.kafka.svc.cluster.local:3306/connect_test?user=confluent&password=confluent","mode":"incrementing","incrementing.column.name":"id","timestamp.column.name":"modified","topic.prefix":"quickstart-jdbc-","poll.interval.ms":"1000","name":"quickstart-jdbc-source"},"tasks":[],"type":null}
+
+
+# curl -s -X GET http://localhost:8083/connectors/quickstart-jdbc-source/status
+{"name":"quickstart-jdbc-source","connector":{"state":"RUNNING","worker_id":"localhost:8083"},"tasks":[{"state":"RUNNING","id":0,"worker_id":"localhost:8083"}],"type":"source"}
+
+#Execute on broker host
+#kubectl exec broker1-0  -n kafka -- kafka-topics --describe --zookeeper zookeeper1-0.zookeeper1.kafka.svc.cluster.local:2181,zookeeper2-0.zookeeper2.kafka.svc.cluster.local:2181,zookeeper3-0.zookeeper3.kafka.svc.cluster.local:2181
+
+Execute command on pod schema-registry
+#kubectl exec registry1-0 -n kafka -- kafka-avro-console-consumer --bootstrap-server broker3-0.kafka3.kafka.svc.cluster.local:9092 --topic quickstart-jdbc-test --new-consumer --from-beginning --max-messages 10
+
+######You should see following messages in the output###############
+{"id":1,"name":{"string":"alice"},"email":{"string":"alice@abc.com"},"department":{"string":"engineering"},"modified":1523882712000}
+{"id":2,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":3,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":4,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":5,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":6,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":7,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":8,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+{"id":9,"name":{"string":"bob"},"email":{"string":"bob@abc.com"},"department":{"string":"sales"},"modified":1523882712000}
+Processed a total of 10 messages
+
+
+#kubectl exec kafkaconnect-0 -n kafka -- kafka-avro-console-consumer --bootstrap-server broker3-0.kafka3.kafka.svc.cluster.local:9092 --topic quickstart-jdbc-test --new-consumer --from-beginning --max-messages 10
+
+kafka-topics --describe --zookeeper localhost:32181
+  
+kafka-avro-console-consumer --bootstrap-server broker1-0.kafka1.kafka.svc.cluster.local:9092 --topic quickstart-jdbc-test --new-consumer --from-beginning --max-messages 10
+
+
+
+
+
+
+
+# kubectl create -f connect1.yml -n kafka
+
+service "kafkaconnect" created
+statefulset.apps "kafkaconnect" created
+
