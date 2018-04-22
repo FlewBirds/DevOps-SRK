@@ -5,10 +5,11 @@ metadata:
   namespace: kafka
 spec:
   ports:
-  - port: 8001
-  clusterIP: None
+  - port: 8000
+#  clusterIP: None
   selector:
     app: zoonavigator-web
+  type: LoadBalancer
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -33,4 +34,4 @@ spec:
         - name: API_PORT
           value: "9001"
         ports:
-        - containerPort: 8001
+        - containerPort: 8000
